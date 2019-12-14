@@ -1,0 +1,41 @@
+#!/bin/bash
+
+if [ $# -ne 2 ]; then
+	echo "Invalid Input"
+	echo "Syntax: video-gen [IMG FOLDER] [AUDIO FILE]"
+	exit
+fi
+
+IMG_DURATION=3
+FADE_DURATION=1
+AUDIO=$2
+TOTAL_DURATION=`echo "($IMG_DURATION + $FADE_DURATION) / $FADE_DURATION" | bc`
+ABSOLUTE_PATH="$(cd "$(dirname "$1")"; pwd)"
+DIR_NAME=${PWD##*/}
+
+INDEX=0
+SAVE_PATH=`pwd`
+
+cd "$ABSOLUTE_PATH"
+rm -rf temp
+mkdir temp
+cd temp
+cp ../*.{png,PNG} .
+
+for file in *.{png,PNG};
+do
+	INDEX=`echo "$INDEX + 1"|bc`
+	mv "${file}" "SEQ_$(printf "%03d" "$INDEX").${file##*.}"
+done
+
+ffmpeg -i SEQ_%03d.{png,PNG} -i $AUDIO -vf zoompan=d=$TOTAL_DURATION:fps=1/$FADE_DURATION,framerate=25:interp_start=0:interp_end=255:scene=100 -c:v mpeg4 -shortest -maxrate 5M -q:v 2 "temp_file.mp4"
+echo "Completed creating slideshow"
+ffmpeg -i temp_file.mp4 -sseof -1 -copyts -i temp_file.mp4 -filter_complex\
+       "[1]fade=out:0:30[t];[0][t]overlay,fade=in:0:30[v];\
+        anullsrc,atrim=0:2[at];[0][at]acrossfade=d=1,afade=d=1[a]"\
+       -map "[v]" -map "[a]" -c:v libx264 -crf 22 -preset veryfast -shortest "$DIR_NAME.mp4"
+
+mv "$DIR_NAME.mp4" "$SAVE_PATH"
+cd ..
+rm -rf temp
+cd "$SAVE_PATH"
