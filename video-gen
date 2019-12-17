@@ -10,6 +10,7 @@ IMG_DURATION=3
 FADE_DURATION=1
 AUDIO=$2
 TOTAL_DURATION=`echo "($IMG_DURATION + $FADE_DURATION) / $FADE_DURATION" | bc`
+echo $TOTAL_DURATION
 ABSOLUTE_PATH="$(cd "$(dirname "$1")"; pwd)"
 DIR_NAME=${PWD##*/}
 
@@ -35,12 +36,10 @@ do
 	mv "${file}" "SEQ_$(printf "%03d" "$INDEX").${file##*.}"
 done
 
-INDEX=`echo "$INDEX + 1"|bc`
-file=`ls *.png|tail -1`
-cp "${file}" "SEQ_$(printf "%03d" "$INDEX").${file##*.}"
+ffmpeg -reinit_filter 0 -i SEQ_%03d.png -i $AUDIO -vf zoompan=d=$TOTAL_DURATION:fps=1/$FADE_DURATION,framerate=25:interp_start=0:interp_end=255:scene=100 -c:v mpeg4 -shortest -maxrate 5M -q:v 2 "temp_file.mp4"
 
-ffmpeg -i SEQ_%03d.png -i $AUDIO -vf zoompan=d=$TOTAL_DURATION:fps=1/$FADE_DURATION,framerate=25:interp_start=0:interp_end=255:scene=100 -c:v mpeg4 -shortest -maxrate 5M -q:v 2 "temp_file.mp4"
 echo "Completed creating slideshow"
+
 ffmpeg -i temp_file.mp4 -sseof -1 -copyts -i temp_file.mp4 -filter_complex\
        "[1]fade=out:0:30[t];[0][t]overlay,fade=in:0:30[v];\
         anullsrc,atrim=0:2[at];[0][at]acrossfade=d=1,afade=d=1[a]"\
