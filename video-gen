@@ -20,15 +20,26 @@ cd "$ABSOLUTE_PATH"
 rm -rf temp
 mkdir temp
 cd temp
-cp ../*.{png,PNG} .
 
-for file in *.{png,PNG};
+cp ../*.{png,jpg} .
+
+for image in *.jpg
+do
+	convert "$image" "${image%.*}.png"
+	rm "$image"
+done
+
+for file in *.png;
 do
 	INDEX=`echo "$INDEX + 1"|bc`
 	mv "${file}" "SEQ_$(printf "%03d" "$INDEX").${file##*.}"
 done
 
-ffmpeg -i SEQ_%03d.{png,PNG} -i $AUDIO -vf zoompan=d=$TOTAL_DURATION:fps=1/$FADE_DURATION,framerate=25:interp_start=0:interp_end=255:scene=100 -c:v mpeg4 -shortest -maxrate 5M -q:v 2 "temp_file.mp4"
+INDEX=`echo "$INDEX + 1"|bc`
+file=`ls *.png|tail -1`
+cp "${file}" "SEQ_$(printf "%03d" "$INDEX").${file##*.}"
+
+ffmpeg -i SEQ_%03d.png -i $AUDIO -vf zoompan=d=$TOTAL_DURATION:fps=1/$FADE_DURATION,framerate=25:interp_start=0:interp_end=255:scene=100 -c:v mpeg4 -shortest -maxrate 5M -q:v 2 "temp_file.mp4"
 echo "Completed creating slideshow"
 ffmpeg -i temp_file.mp4 -sseof -1 -copyts -i temp_file.mp4 -filter_complex\
        "[1]fade=out:0:30[t];[0][t]overlay,fade=in:0:30[v];\
