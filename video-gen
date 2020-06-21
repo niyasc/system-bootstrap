@@ -6,8 +6,8 @@ if [ $# -ne 2 ]; then
 	exit
 fi
 
-IMG_DURATION=3
-FADE_DURATION=1
+IMG_DURATION=2.5
+FADE_DURATION=0.5
 AUDIO=$2
 TOTAL_DURATION=`echo "($IMG_DURATION + $FADE_DURATION) / $FADE_DURATION" | bc`
 echo $TOTAL_DURATION
@@ -22,13 +22,8 @@ rm -rf temp
 mkdir temp
 cd temp
 
-cp ../*.{png,jpg} .
+cp ../*.png .
 
-for image in *.jpg
-do
-	convert "$image" "${image%.*}.png"
-	rm "$image"
-done
 
 for file in *.png;
 do
